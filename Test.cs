@@ -14,21 +14,19 @@ using System.Net;
 using System.Linq;
 using Microsoft.Extensions.Primitives;
 
-
 namespace Estelle.Function
 {
-
-    public static class PostUser
+    public static class PostCar
     {
-        [FunctionName("PostUser")]
+        [FunctionName("PostCar")]
         public static async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", "update", Route = "createcar")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "createcar")] HttpRequest req,
             [CosmosDB(databaseName: "db", collectionName: "db-container",
             ConnectionStringSetting = "CosmosDbConnectionString"
             )]IAsyncCollector<dynamic> documentsOut,
             ILogger log)
         {
-            // string id = req.Query["id"];
+            string id = req.Query["id"];
             string year = req.Query["year"];
             string brand = req.Query["brand"];
             string model = req.Query["model"];
@@ -37,23 +35,25 @@ namespace Estelle.Function
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
-            // id = id ?? data?.id;
+            id = id ?? data?.id;
             year = year ?? data?.year;
             brand = brand ?? data?.brand;
             model = model ?? data?.model;
             engineType = engineType ?? data?.engineType;
 
-            // Add a JSON document to the output container.
-            await documentsOut.AddAsync(new
+            if (!string.IsNullOrEmpty(year) && !string.IsNullOrEmpty(brand) && !string.IsNullOrEmpty(model) && !string.IsNullOrEmpty(engineType))
             {
-                // id = id,
-                year = year,
-                brand = brand,
-                model = model,
-                engineType = engineType
-            });
+                await documentsOut.AddAsync(new
+                {
+                    id = System.Guid.NewGuid().ToString(),
+                    year = year,
+                    brand = brand,
+                    model = model,
+                    engineType = engineType
+                });
+            }
 
-            string responseMessage = string.IsNullOrEmpty(year)
+            string responseMessage = (string.IsNullOrEmpty(year) || string.IsNullOrEmpty(brand) || string.IsNullOrEmpty(model) || string.IsNullOrEmpty(engineType))
                 ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
                 : $"Succeed";
 
@@ -61,12 +61,58 @@ namespace Estelle.Function
         }
     }
 
-
-
-
-    public static class GetAllUser
+    // search year
+    public static class SearchYear
     {
-        [FunctionName("GetAllUser")]
+        [FunctionName("SearchYear")]
+        public static string Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/search/{year}")] HttpRequest req, string year,
+            [CosmosDB("db", "db-container",
+                ConnectionStringSetting = "CosmosDbConnectionString",
+                SqlQuery = "SELECT * FROM c WHERE c.year={year}")]
+                IEnumerable<Car> Result,
+            ILogger log)
+        {
+            log.LogInformation("C# HTTP trigger function processed a request.->get");
+
+            List<Car> newCar = new List<Car>();
+
+            foreach (Car car in Result)
+            {
+                newCar.Add(car);
+            }
+            var searchYear = Newtonsoft.Json.JsonConvert.SerializeObject(newCar);
+            return searchYear;
+        }
+    }
+    public static class SearchBrand
+    {
+        [FunctionName("SearchBrand")]
+        public static string Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/search/{brand}")] HttpRequest req, string brand,
+            [CosmosDB("db", "db-container",
+                ConnectionStringSetting = "CosmosDbConnectionString",
+                SqlQuery = "SELECT * FROM c WHERE c.brand={brand}")]
+                IEnumerable<Car> Result,
+            ILogger log)
+        {
+            log.LogInformation("C# HTTP trigger function processed a request.->get");
+
+            List<Car> newCar = new List<Car>();
+
+            foreach (Car car in Result)
+            {
+                newCar.Add(car);
+            }
+            var searchBrand = Newtonsoft.Json.JsonConvert.SerializeObject(newCar);
+            return searchBrand;
+        }
+    }
+    // 
+
+    public static class GetAllCars
+    {
+        [FunctionName("GetAllCars")]
         public static string Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get",
                 Route = "cars")]HttpRequest req,
@@ -79,23 +125,22 @@ namespace Estelle.Function
             log.LogInformation("C# HTTP trigger function processed a request.->getall");
 
             //var
-            var userList = new List<Car>();
+            var carList = new List<Car>();
             // Console.WriteLine(Result);
-            foreach (Car user in Result)
+            foreach (Car car in Result)
             {
-                userList.Add(user);
+                carList.Add(car);
             }
-            var jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(userList);
-            return jsonString;
+            var getCars = Newtonsoft.Json.JsonConvert.SerializeObject(carList);
+            return getCars;
         }
     }
 
-    public static class GetSpecificUser
+    public static class GetCar
     {
-        [FunctionName("GetSpecificUser")]
+        [FunctionName("GetCar")]
         public static string Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get",
-                Route = "car/{id}")]HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/{id}")] HttpRequest req,
             [CosmosDB("db", "db-container",
                 ConnectionStringSetting = "CosmosDbConnectionString",
                 SqlQuery = "SELECT * FROM c WHERE c.id={id}")]
@@ -104,23 +149,20 @@ namespace Estelle.Function
         {
             log.LogInformation("C# HTTP trigger function processed a request.->get");
 
-            List<Car> newUser = new List<Car>();
+            List<Car> newCar = new List<Car>();
 
-            foreach (Car user in Result)
+            foreach (Car car in Result)
             {
-                newUser.Add(user);
+                newCar.Add(car);
             }
-            var jsonString1 = Newtonsoft.Json.JsonConvert.SerializeObject(newUser);
-            return jsonString1;
+            var getCar = Newtonsoft.Json.JsonConvert.SerializeObject(newCar);
+            return getCar;
         }
     }
 
-
-
-
-    public static class DeleteUser
+    public static class DeleteCar
     {
-        [FunctionName("DeleteUser")]
+        [FunctionName("DeleteCar")]
         public static string Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete",
                 Route = "deletecar/{id}")]HttpRequest req,
@@ -130,10 +172,9 @@ namespace Estelle.Function
         {
             var option = new FeedOptions { EnableCrossPartitionQuery = true };
             var collectionUri = UriFactory.CreateDocumentCollectionUri("db", "db-container");
-            // Console.WriteLine(id);
+
             var document = client.CreateDocumentQuery(collectionUri, option).Where(t => t.Id == id)
                     .AsEnumerable().FirstOrDefault();
-            // Console.WriteLine(document);
 
             if (document == null)
             {
@@ -143,6 +184,5 @@ namespace Estelle.Function
             return "Deleted";
         }
     }
-
 
 }
