@@ -13,6 +13,8 @@ using Microsoft.Azure.Documents.Client;
 using System.Net;
 using System.Linq;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Azure.Documents.Linq;
+
 
 namespace Estelle.Function
 {
@@ -20,11 +22,8 @@ namespace Estelle.Function
     {
         [FunctionName("PostCar")]
         public static async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "createcar")] HttpRequest req,
-            [CosmosDB(databaseName: "db", collectionName: "db-container",
-            ConnectionStringSetting = "CosmosDbConnectionString"
-            )]IAsyncCollector<dynamic> documentsOut,
-            ILogger log)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "createcar")] HttpRequest req, [CosmosDB(databaseName: "db", collectionName: "db-container",
+            ConnectionStringSetting = "CosmosDbConnectionString")]IAsyncCollector<dynamic> documentsOut, ILogger log)
         {
             string id = req.Query["id"];
             string year = req.Query["year"];
@@ -164,17 +163,12 @@ namespace Estelle.Function
     {
         [FunctionName("DeleteCar")]
         public static string Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "delete",
-                Route = "deletecar/{id}")]HttpRequest req,
-            [CosmosDB(ConnectionStringSetting = "CosmosDbConnectionString",
-                SqlQuery = "SELECT * FROM c WHERE c.id={id}")]
-                 DocumentClient client, ILogger log, string id)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "deletecar/{id}")] HttpRequest req, [CosmosDB(ConnectionStringSetting = "CosmosDbConnectionString", SqlQuery = "SELECT * FROM c WHERE c.id={id}")] DocumentClient client, ILogger log, string id)
         {
             var option = new FeedOptions { EnableCrossPartitionQuery = true };
             var collectionUri = UriFactory.CreateDocumentCollectionUri("db", "db-container");
 
-            var document = client.CreateDocumentQuery(collectionUri, option).Where(t => t.Id == id)
-                    .AsEnumerable().FirstOrDefault();
+            var document = client.CreateDocumentQuery(collectionUri, option).Where(t => t.Id == id).AsEnumerable().FirstOrDefault();
 
             if (document == null)
             {
@@ -185,4 +179,36 @@ namespace Estelle.Function
         }
     }
 
+    // update
+    public static class UpdateCar
+    {
+        [FunctionName("UpdateCar")]
+        public static async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "updatecar/{id}")] HttpRequest req, [CosmosDB(ConnectionStringSetting = "CosmosDbConnectionString", SqlQuery = "SELECT * FROM c WHERE c.id={id}")] DocumentClient client, ILogger log, string id)
+        {
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            Console.WriteLine(requestBody);
+
+            dynamic data = JsonConvert.DeserializeObject(requestBody);
+
+            var option = new FeedOptions { EnableCrossPartitionQuery = true };
+            var collectionUri = UriFactory.CreateDocumentCollectionUri("db", "db-container");
+
+            var document = client.CreateDocumentQuery(collectionUri, option).Where(t => t.Id == id).AsEnumerable().FirstOrDefault();
+
+            if (document == null)
+            {
+                return new NotFoundResult();
+            }
+            document.SetPropertyValue("id", data.id);
+            document.SetPropertyValue("year", data.year);
+            document.SetPropertyValue("brand", data.brand);
+            document.SetPropertyValue("model", data.model);
+            document.SetPropertyValue("engineType", data.engineType);
+
+            await client.ReplaceDocumentAsync(document);
+
+            return new OkResult();
+        }
+    }
 }
