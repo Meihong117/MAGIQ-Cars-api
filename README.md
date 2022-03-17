@@ -1,7 +1,7 @@
 Cars API:
 
-Database: Azure Cosmos DB
-Language: Azure Function App with C#
+-> Database: Azure Cosmos DB
+-> Language: Azure Function App with C#
 
 -> when create an id, the id will be the random id like: b0dfea81-b9ef-48c3-b5f8-ee4891dcd718. I have already put some data in database for the test.
  
