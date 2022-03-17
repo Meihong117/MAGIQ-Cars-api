@@ -53,7 +53,7 @@ namespace Estelle.Function
             }
 
             string responseMessage = (string.IsNullOrEmpty(year) || string.IsNullOrEmpty(brand) || string.IsNullOrEmpty(model) || string.IsNullOrEmpty(engineType))
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
+                ? "This HTTP triggered function executed successfully. But you are missing year/brand/model/engineType. Please check agian."
                 : $"Succeed";
 
             return new OkObjectResult(responseMessage);
@@ -168,7 +168,7 @@ namespace Estelle.Function
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "updatecar/{id}")] HttpRequest req, [CosmosDB(ConnectionStringSetting = "CosmosDbConnectionString", SqlQuery = "SELECT * FROM c WHERE c.id={id}")] DocumentClient client, ILogger log, string id)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            Console.WriteLine(requestBody);
+            // Console.WriteLine(requestBody);
 
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
