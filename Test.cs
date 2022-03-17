@@ -65,17 +65,10 @@ namespace Estelle.Function
     {
         [FunctionName("SearchYear")]
         public static string Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/search/{year}")] HttpRequest req, string year,
-            [CosmosDB("db", "db-container",
-                ConnectionStringSetting = "CosmosDbConnectionString",
-                SqlQuery = "SELECT * FROM c WHERE c.year={year}")]
-                IEnumerable<Car> Result,
-            ILogger log)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/search/year/{year}")] HttpRequest req, string year, [CosmosDB("db", "db-container", ConnectionStringSetting = "CosmosDbConnectionString", SqlQuery = "SELECT * FROM c WHERE c.year={year}")] IEnumerable<Car> Result, ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.->get");
-
+            log.LogInformation("C# HTTP trigger function processed a request.");
             List<Car> newCar = new List<Car>();
-
             foreach (Car car in Result)
             {
                 newCar.Add(car);
@@ -88,17 +81,10 @@ namespace Estelle.Function
     {
         [FunctionName("SearchBrand")]
         public static string Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/search/{brand}")] HttpRequest req, string brand,
-            [CosmosDB("db", "db-container",
-                ConnectionStringSetting = "CosmosDbConnectionString",
-                SqlQuery = "SELECT * FROM c WHERE c.brand={brand}")]
-                IEnumerable<Car> Result,
-            ILogger log)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "car/search/brand/{brand}")] HttpRequest req, string brand, [CosmosDB("db", "db-container", ConnectionStringSetting = "CosmosDbConnectionString", SqlQuery = "SELECT * FROM c WHERE c.brand={brand}")] IEnumerable<Car> Result, ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.->get");
-
+            log.LogInformation("C# HTTP trigger function processed a request.");
             List<Car> newCar = new List<Car>();
-
             foreach (Car car in Result)
             {
                 newCar.Add(car);
@@ -121,7 +107,7 @@ namespace Estelle.Function
                 IEnumerable<Car> Result,
             ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.->getall");
+            log.LogInformation("C# HTTP trigger function processed a request.");
 
             //var
             var carList = new List<Car>();
@@ -146,7 +132,7 @@ namespace Estelle.Function
                 IEnumerable<Car> Result,
             ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.->get");
+            log.LogInformation("C# HTTP trigger function processed a request.");
 
             List<Car> newCar = new List<Car>();
 
@@ -162,7 +148,7 @@ namespace Estelle.Function
     public static class DeleteCar
     {
         [FunctionName("DeleteCar")]
-        public static string Run(
+        public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "deletecar/{id}")] HttpRequest req, [CosmosDB(ConnectionStringSetting = "CosmosDbConnectionString", SqlQuery = "SELECT * FROM c WHERE c.id={id}")] DocumentClient client, ILogger log, string id)
         {
             var option = new FeedOptions { EnableCrossPartitionQuery = true };
@@ -170,16 +156,11 @@ namespace Estelle.Function
 
             var document = client.CreateDocumentQuery(collectionUri, option).Where(t => t.Id == id).AsEnumerable().FirstOrDefault();
 
-            if (document == null)
-            {
-                return "no such document";
-            }
-            client.DeleteDocumentAsync(document.SelfLink, new RequestOptions { PartitionKey = new PartitionKey(document.Id) });
-            return "Deleted";
+            await client.DeleteDocumentAsync(document.SelfLink, new RequestOptions { PartitionKey = new PartitionKey(document.Id) });
+            return new OkResult();
         }
     }
 
-    // update
     public static class UpdateCar
     {
         [FunctionName("UpdateCar")]
